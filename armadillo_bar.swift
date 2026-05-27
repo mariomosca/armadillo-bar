@@ -220,6 +220,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
         open.target = self
         menu.addItem(open)
 
+        let voice = NSMenuItem(title: "Impostazioni voce…",
+                               action: #selector(showVoiceSettings),
+                               keyEquivalent: "")
+        voice.target = self
+        menu.addItem(voice)
+
         menu.addItem(.separator())
         let clippy = NSMenuItem(title: clippyMenuTitle(),
                                 action: #selector(toggleClippy),
@@ -364,6 +370,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
         let bubble = ClippyBubblePanel(text: text, anchor: armadillo)
         bubble.show(autoDismissAfter: clippyVisibleDuration)
         clippyBubble = bubble
+        speakIfEnabled(text)
+    }
+
+    /// Se il TTS opt-in è attivo, sintetizza/recupera-da-cache la frase e la
+    /// riproduce con la voce clonata dell'utente. Fallback silenzioso al solo
+    /// balloon se disattivo o se la richiesta fallisce.
+    private func speakIfEnabled(_ text: String) {
+        guard ArmadilloTTS.shared.isEnabled else { return }
+        ArmadilloTTS.shared.audioURL(for: text) { [weak self] url in
+            guard let self, let url else { return }
+            self.play(url: url)
+        }
     }
 
     // MARK: - Ask dialog (click on armadillo)
@@ -488,6 +506,56 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
             }
         } catch {
             NSLog("Login toggle failed: \(error)")
+        }
+    }
+
+    // MARK: - Voice settings (TTS opt-in)
+
+    @objc func showVoiceSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        let cfg = ArmadilloTTS.shared.loadConfig()
+
+        let alert = NSAlert()
+        alert.messageText = "Impostazioni voce (ElevenLabs)"
+        alert.informativeText = """
+        Opzionale. Se attivo, le frasi dell'Armadillo vengono lette con la \
+        TUA voce clonata su ElevenLabs (vedi scripts/clone-voice.sh). Usa solo \
+        voci di cui hai diritto, per uso personale. Lasciando disattivo, l'app \
+        resta offline e usa i clip audio.
+        """
+        alert.alertStyle = .informational
+
+        let pad: CGFloat = 6
+        let width: CGFloat = 320
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: width, height: 96))
+
+        let enabled = NSButton(checkboxWithTitle: "Abilita voce dinamica (TTS)",
+                               target: nil, action: nil)
+        enabled.frame = NSRect(x: 0, y: 70, width: width, height: 20)
+        enabled.state = cfg.enabled ? .on : .off
+        view.addSubview(enabled)
+
+        let keyField = NSTextField(frame: NSRect(x: 0, y: 38, width: width, height: 24))
+        keyField.placeholderString = "ElevenLabs API key (sk_…)"
+        keyField.stringValue = cfg.apiKey
+        view.addSubview(keyField)
+
+        let voiceField = NSTextField(frame: NSRect(x: 0, y: 38 - 24 - pad, width: width, height: 24))
+        voiceField.placeholderString = "voice_id"
+        voiceField.stringValue = cfg.voiceId
+        view.addSubview(voiceField)
+
+        alert.accessoryView = view
+        alert.addButton(withTitle: "Salva")
+        alert.addButton(withTitle: "Annulla")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            var newCfg = cfg
+            newCfg.enabled = (enabled.state == .on)
+            newCfg.apiKey = keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            newCfg.voiceId = voiceField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if newCfg.modelId.isEmpty { newCfg.modelId = "eleven_multilingual_v2" }
+            ArmadilloTTS.shared.saveConfig(newCfg)
         }
     }
 

@@ -70,6 +70,26 @@ Nome file = label nel menu.
 
 ---
 
+## 🎙️ Voce dinamica (TTS, opzionale)
+
+Feature **opt-in, disattivata di default**. Se attivata, le frasi dell'Armadillo Clippy
+vengono lette con una **voce clonata sul tuo account [ElevenLabs](https://elevenlabs.io)**
+invece che da clip statici — così puoi avere frasi infinite senza file audio. Senza
+configurazione l'app resta **offline** e si comporta come sempre.
+
+- Crea il clone con lo script: `./scripts/clone-voice.sh "Nome Voce" sample1.wav …`
+- Attivalo dal menu → **"Impostazioni voce…"** (API key + `voice_id`)
+- Le frasi generate vengono messe in **cache su disco** (poi funzionano offline)
+
+📖 **Procedura completa**: [`docs/VOICE-CLONE.md`](docs/VOICE-CLONE.md)
+
+> ⚠️ Lo script **non contiene né distribuisce alcuna voce**. Clonare la voce di una
+> persona reale senza consenso viola i ToS di ElevenLabs e il diritto alla voce. Usa
+> solo voci di cui hai diritto, per uso personale e non commerciale. Vale la stessa
+> [takedown policy](#-licenza-e-disclaimer) del progetto.
+
+---
+
 ## ⌨️ Shortcut globali predefiniti
 
 | Shortcut | Clip |
@@ -90,11 +110,12 @@ Funzionano ovunque, anche senza aprire il menu. Ripremere lo stesso shortcut fer
 
 ## 🛠 Stack tecnico
 
-- **Swift** (multi-file: `armadillo_bar.swift`, `ArmadilloClippyWindow.swift`, `ClippyBubblePanel.swift`, `ArmadilloAskWindow.swift`)
+- **Swift** (multi-file: `armadillo_bar.swift`, `ArmadilloClippyWindow.swift`, `ClippyBubblePanel.swift`, `ArmadilloAskWindow.swift`, `ArmadilloTTS.swift`)
 - **Cocoa** — NSStatusItem, NSMenu
 - **AVFoundation** — AVAudioPlayer
 - **ServiceManagement** — SMAppService per login item (macOS 13+)
 - **Carbon.HIToolbox** — RegisterEventHotKey per shortcut globali (zero permessi accessibility)
+- **Foundation/URLSession + CryptoKit** — TTS ElevenLabs opzionale con cache su disco (`ArmadilloTTS.swift`)
 - Binario universal arm64 + x86_64 pinned `minos=13.0` (Ventura → Tahoe + futuro, Apple Silicon + Intel)
 
 ---

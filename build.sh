@@ -9,7 +9,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/clips"
 # Universal binary (arm64 + x86_64) pinned to macOS 13.0 deployment target.
 TARGETS=("arm64-apple-macos13.0" "x86_64-apple-macos13.0")
 TMP=$(mktemp -d)
-SOURCES=(armadillo_bar.swift ArmadilloClippyWindow.swift ClippyBubblePanel.swift ArmadilloAskWindow.swift)
+SOURCES=(armadillo_bar.swift ArmadilloClippyWindow.swift ClippyBubblePanel.swift ArmadilloAskWindow.swift ArmadilloTTS.swift)
 for t in "${TARGETS[@]}"; do
   swiftc "${SOURCES[@]}" -O \
     -target "$t" \
