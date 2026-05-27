@@ -54,6 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
     var currentURL: URL?
     var stopWork: DispatchWorkItem?
     var loginItem: NSMenuItem!
+    var muteInCallItem: NSMenuItem?
     var hotKeyRefs: [EventHotKeyRef?] = []
     let maxDuration: TimeInterval = 30
 
@@ -226,6 +227,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
         voice.target = self
         menu.addItem(voice)
 
+        muteInCallItem = NSMenuItem(title: "Silenzia in chiamata",
+                                    action: #selector(toggleMuteInCall),
+                                    keyEquivalent: "")
+        muteInCallItem?.target = self
+        muteInCallItem?.state = muteInCall ? .on : .off
+        menu.addItem(muteInCallItem!)
+
         menu.addItem(.separator())
         let clippy = NSMenuItem(title: clippyMenuTitle(),
                                 action: #selector(toggleClippy),
@@ -261,6 +269,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
 
     func menuWillOpen(_ menu: NSMenu) {
         loginItem.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
+        muteInCallItem?.state = muteInCall ? .on : .off
         refreshClippyToggleLabel()
     }
 
@@ -376,12 +385,38 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, AVAudioPlaye
     /// Se il TTS opt-in è attivo, sintetizza/recupera-da-cache la frase e la
     /// riproduce con la voce clonata dell'utente. Fallback silenzioso al solo
     /// balloon se disattivo o se la richiesta fallisce.
+    ///
+    /// Se "Silenzia in chiamata" è attivo (default) e mic/camera risultano in
+    /// uso, l'Armadillo resta zitto: il balloon viene comunque mostrato, ma non
+    /// parte alcun audio (per non disturbare durante una videocall).
     private func speakIfEnabled(_ text: String) {
         guard ArmadilloTTS.shared.isEnabled else { return }
+        if muteInCall && ArmadilloCallDetector.isInCall() { return }
         ArmadilloTTS.shared.audioURL(for: text) { [weak self] url in
             guard let self, let url else { return }
+            // Ricontrolla appena prima di riprodurre: la call potrebbe essere
+            // iniziata durante la generazione audio.
+            if self.muteInCall && ArmadilloCallDetector.isInCall() { return }
             self.play(url: url)
         }
+    }
+
+    // MARK: - "Silenzia in chiamata" (preferenza)
+
+    private let muteInCallKey = "muteInCall"
+
+    /// Default ON: se non impostata, l'Armadillo tace durante le call.
+    var muteInCall: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: muteInCallKey) == nil { return true }
+            return UserDefaults.standard.bool(forKey: muteInCallKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: muteInCallKey) }
+    }
+
+    @objc func toggleMuteInCall() {
+        muteInCall.toggle()
+        muteInCallItem?.state = muteInCall ? .on : .off
     }
 
     // MARK: - Ask dialog (click on armadillo)

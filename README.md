@@ -80,6 +80,10 @@ configurazione l'app resta **offline** e si comporta come sempre.
 - Crea il clone con lo script: `./scripts/clone-voice.sh "Nome Voce" sample1.wav …`
 - Attivalo dal menu → **"Impostazioni voce…"** (API key + `voice_id`)
 - Le frasi generate vengono messe in **cache su disco** (poi funzionano offline)
+- 🤫 **Silenzia in chiamata** (menu, ON di default): se microfono o camera sono
+  in uso (Teams, Meet, Zoom, FaceTime…), l'Armadillo mostra il balloon ma resta
+  zitto, per non disturbare durante una videocall. Rilevamento via CoreAudio /
+  CoreMediaIO, senza permessi Accessibility.
 
 📖 **Procedura completa**: [`docs/VOICE-CLONE.md`](docs/VOICE-CLONE.md)
 
@@ -116,6 +120,7 @@ Funzionano ovunque, anche senza aprire il menu. Ripremere lo stesso shortcut fer
 - **ServiceManagement** — SMAppService per login item (macOS 13+)
 - **Carbon.HIToolbox** — RegisterEventHotKey per shortcut globali (zero permessi accessibility)
 - **Foundation/URLSession + CryptoKit** — TTS ElevenLabs opzionale con cache su disco (`ArmadilloTTS.swift`)
+- **CoreAudio + CoreMediaIO** — rilevamento mic/camera in uso per "Silenzia in chiamata" (`ArmadilloCallDetector.swift`)
 - Binario universal arm64 + x86_64 pinned `minos=13.0` (Ventura → Tahoe + futuro, Apple Silicon + Intel)
 
 ---
